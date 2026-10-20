@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Roblox Tetris World</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@700;900&display=swap" rel="stylesheet">
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body {
+            font-family: 'Nunito', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #311042 100%);
+            touch-action: manipulation;
+        }
+
+        .roblox-font {
+            font-family: 'Fredoka One', cursive;
+            letter-spacing: 1px;
+        }
+
+        /* Roblox 3D Button Style */
+        .roblox-btn {
+            background: #00a2ff;
+            box-shadow: 0px 6px 0px #0066aa;
+            transition: all 0.1s ease;
+        }
+
+        .roblox-btn:active {
+            transform: translateY(4px);
+            box-shadow: 0px 2px 0px #0066aa;
+        }
+
+        .roblox-btn-green {
+            background: #00e676;
+            box-shadow: 0px 6px 0px #00a040;
+        }
+
+        .roblox-btn-green:active {
+            transform: translateY(4px);
+            box-shadow: 0px 2px 0px #00a040;
+        }
+
+        .roblox-btn-red {
+            background: #ff3d00;
+            box-shadow: 0px 6px 0px #a02000;
+        }
+
+        .roblox-btn-red:active {
+            transform: translateY(4px);
+            box-shadow: 0px 2px 0px #a02000;
+        }
+
+        /* Glassmorphism Panel */
+        .roblox-panel {
+            background: rgba(30, 41, 59, 0.85);
+            border: 4px solid #38bdf8;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), inset 0 0 15px rgba(56, 189, 248, 0.2);
+            backdrop-filter: blur(8px);
+        }
+
+        /* Canvas Border Glow */
+        #gameCanvas {
+            box-shadow: 0 0 20px rgba(0, 162, 255, 0.4);
+            background-color: rgba(15, 23, 42, 0.95);
+        }
+
+        /* Touch Control Buttons */
+        .ctrl-btn {
+            background: rgba(255, 255, 255, 0.15);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 4px 0 rgba(0, 0, 0, 0.4);
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .ctrl-btn:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 rgba(0, 0, 0, 0.4);
+            background: rgba(0, 162, 255, 0.5);
+        }
+    </style>
+</head>
+<body class="min-h-screen text-white flex flex-col items-center justify-between p-2 md:p-4 select-none overflow-x-hidden">
+
+    <!-- Header -->
+    <header class="w-full max-w-4xl flex justify-between items-center bg-slate-900/80 p-3 rounded-2xl border-2 border-slate-700 shadow-lg mb-2">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-red-600 rounded-lg border-2 border-white flex items-center justify-center rotate-3 shadow-md">
+                <span class="roblox-font text-white text-xl">R</span>
+            </div>
+            <div>
+                <h1 class="roblox-font text-xl md:text-2xl text-amber-400 tracking-wider flex items-center gap-2">
+                    ROBLOX TETRIS <span class="text-xs bg-sky-500 text-white px-2 py-0.5 rounded-full uppercase">STUDIO</span>
+                </h1>
+                <p class="text-xs text-slate-400 font-bold">Блочное приключение</p>
+            </div>
+        </div>
+        
+        <!-- Robux / Score Display -->
+        <div class="flex items-center gap-2 bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-600">
+            <i class="fa-solid font-bold text-amber-400 text-lg">R$</i>
+            <span id="robuxCount" class="roblox-font text-lg text-emerald-400">0</span>
+        </div>
+    </header>
+
+    <!-- Main Game Container -->
+    <main class="w-full max-w-4xl flex flex-col md:flex-row items-center md:items-start justify-center gap-4 my-auto">
+        
+        <!-- Left Panel: Stats & Next Piece -->
+        <div class="w-full md:w-48 flex md:flex-col justify-between md:justify-start gap-3 order-2 md:order-1">
+            
+            <!-- Next Piece Panel -->
+            <div class="roblox-panel p-3 rounded-2xl text-center flex-1">
+                <h3 class="roblox-font text-sm text-sky-300 uppercase mb-2">Следующая</h3>
+                <div class="bg-slate-950/60 p-2 rounded-xl flex items-center justify-center border border-slate-800 h-24">
+                    <canvas id="nextCanvas" width="90" height="90"></canvas>
+                </div>
+            </div>
+
+            <!-- Stats Panel -->
+            <div class="roblox-panel p-3 rounded-2xl flex-1 flex flex-col justify-center gap-2">
+                <div>
+                    <span class="text-xs text-slate-400 font-extrabold uppercase block">Очки</span>
+                    <span id="score" class="roblox-font text-2xl text-amber-400 drop-shadow">0</span>
+                </div>
+                <div>
+                    <span class="text-xs text-slate-400 font-extrabold uppercase block">Уровень</span>
+                    <span id="level" class="roblox-font text-xl text-sky-400">1</span>
+                </div>
+                <div>
+                    <span class="text-xs text-slate-400 font-extrabold uppercase block">Линии</span>
+                    <span id="lines" class="roblox-font text-xl text-emerald-400">0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Center: Game Board Canvas -->
+        <div class="relative order-1 md:order-2">
+            <div class="roblox-panel p-2 rounded-3xl">
+                <canvas id="gameCanvas" width="240" height="480" class="rounded-2xl"></canvas>
+            </div>
+
+            <!-- Start / Pause / Game Over Overlay -->
+            <div id="overlay" class="absolute inset-0 bg-slate-950/85 backdrop-blur-sm rounded-3xl flex flex-col items-center justify-center p-6 text-center z-20">
+                <div class="w-16 h-16 bg-sky-500 rounded-2xl flex items-center justify-center mb-4 border-4 border-white rotate-6 shadow-xl animate-bounce">
+                    <i class="fa-solid fa-cubes text-3xl text-white"></i>
+                </div>
+                <h2 id="overlayTitle" class="roblox-font text-3xl text-amber-400 mb-2">ГОТОВ К ИГРЕ?</h2>
+                <p id="overlaySub" class="text-sm text-slate-300 mb-6 max-w-xs font-semibold">Строительный мир Roblox ждет! Собирай блоки и получай Robux-очки!</p>
+                <button id="startBtn" class="roblox-btn roblox-btn-green text-white roblox-font text-xl px-8 py-3 rounded-2xl w-full max-w-xs uppercase tracking-wide cursor-pointer">
+                    ИГРАТЬ!
+                </button>
+            </div>
+        </div>
+
+        <!-- Right Panel: Controls & High Scores -->
+        <div class="w-full md:w-48 flex md:flex-col justify-between md:justify-start gap-3 order-3">
+            
+            <!-- Instructions Panel -->
+            <div class="roblox-panel p-3 rounded-2xl text-xs space-y-2 hidden md:block">
+                <h3 class="roblox-font text-sm text-sky-300 uppercase mb-1">Управление</h3>
+                <div class="flex justify-between items-center text-slate-300">
+                    <span>Стрелки / WASD</span>
+                    <span class="bg-slate-800 px-1.5 py-0.5 rounded border border-slate-600 font-mono">Движение</span>
+                </div>
+                <div class="flex justify-between items-center text-slate-300">
+                    <span>Стрелка Вверх / W</span>
+                    <span class="bg-slate-800 px-1.5 py-0.5 rounded border border-slate-600 font-mono">Поворот</span>
+                </div>
+                <div class="flex justify-between items-center text-slate-300">
+                    <span>Пробел</span>
+                    <span class="bg-slate-800 px-1.5 py-0.5 rounded border border-slate-600 font-mono">Сброс</span>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="roblox-panel p-3 rounded-2xl flex flex-row md:flex-col gap-2 w-full">
+                <button id="pauseBtn" class="roblox-btn text-white roblox-font text-sm py-2 px-3 rounded-xl flex-1 flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-pause"></i> ПАУЗА
+                </button>
+                <button id="soundBtn" class="roblox-btn roblox-btn-green text-white roblox-font text-sm py-2 px-3 rounded-xl flex-1 flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-volume-high"></i> ЗВУК
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- On-Screen Controls for Mobile / Touch -->
+    <div class="w-full max-w-sm mt-2 grid grid-cols-4 gap-2 md:hidden">
+        <button id="btnLeft" class="ctrl-btn py-3 rounded-2xl text-xl text-white flex items-center justify-center">
+            <i class="fa-solid fa-arrow-left"></i>
+        </button>
+        <button id="btnRotate" class="ctrl-btn py-3 rounded-2xl text-xl text-amber-400 flex items-center justify-center">
+            <i class="fa-solid fa-rotate-right"></i>
+        </button>
+        <button id="btnRight" class="ctrl-btn py-3 rounded-2xl text-xl text-white flex items-center justify-center">
+            <i class="fa-solid fa-arrow-right"></i>
+        </button>
+        <button id="btnDrop" class="ctrl-btn py-3 rounded-2xl text-xl text-emerald-400 flex items-center justify-center">
+            <i class="fa-solid fa-angles-down"></i>
+        </button>
+    </div>
+
+    <script>
+        // Web Audio API Synthesizer for Roblox-style sound effects
+        class SoundFX {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            }
+
+            playMove() {
+                if (!this.enabled || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(300, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(150, this.ctx.currentTime + 0.05);
+                gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.05);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.05);
+            }
+
+            playRotate() {
+                if (!this.enabled || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(400, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(600, this.ctx.currentTime + 0.08);
+                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.08);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.08);
+            }
+
+            playDrop() {
+                if (!this.enabled || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(180, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(60, this.ctx.currentTime + 0.12);
+                gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.12);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.12);
+            }
+
+            playClear() {
+                if (!this.enabled || !this.ctx) return;
+                const now = this.ctx.currentTime;
+                const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6 (Roblox happy chime)
+                notes.forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, now + idx * 0.06);
+                    gain.gain.setValueAtTime(0.2, now + idx * 0.06);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.06 + 0.15);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now + idx * 0.06);
+                    osc.stop(now + idx * 0.06 + 0.15);
+                });
+            }
+
+            playGameOver() {
+                if (!this.enabled || !this.ctx) return;
+                const now = this.ctx.currentTime;
+                const notes = [300, 250, 200, 150];
+                notes.forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(freq, now + idx * 0.12);
+                    gain.gain.setValueAtTime(0.2, now + idx * 0.12);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.12 + 0.2);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now + idx * 0.12);
+                    osc.stop(now + idx * 0.12 + 0.2);
+                });
+            }
+        }
+
+        const sound = new SoundFX();
+
+        const COLS = 10;
+        const ROWS = 20;
+        const BLOCK_SIZE = 24; // 240x480 canvas size
+
+        // Roblox Vivid Plastic Colors
+        const SHAPES_COLORS = [
+            null,
+            { main: '#00d2ff', top: '#80e5ff', side: '#0088cc' }, // I - Blue
+            { main: '#ffff00', top: '#ffffb3', side: '#ccaa00' }, // O - Yellow
+            { main: '#a100ff', top: '#d480ff', side: '#6600cc' }, // T - Purple
+            { main: '#00e676', top: '#80f3bb', side: '#00994d' }, // S - Green
+            { main: '#ff1744', top: '#ff8a9e', side: '#b20024' }, // Z - Red
+            { main: '#2979ff', top: '#82b1ff', side: '#1565c0' }, // J - Dark Blue
+            { main: '#ff9100', top: '#ffd180', side: '#c66900' }  // L - Orange
+        ];
+
+        // Shapes definitions
+        const SHAPES = [
+            [],
+            [[0, 0, 0, 0], [1, 1, 1, 1], [0, 0, 0, 0], [0, 0, 0, 0]], // I
+            [[2, 2], [2, 2]],                                        // O
+            [[0, 3, 0], [3, 3, 3], [0, 0, 0]],                        // T
+            [[0, 4, 4], [4, 4, 0], [0, 0, 0]],                        // S
+            [[5, 5, 0], [0, 5, 5], [0, 0, 0]],                        // Z
+            [[6, 0, 0], [6, 6, 6], [0, 0, 0]],                        // J
+            [[0, 0, 7], [7, 7, 7], [0, 0, 0]]                         // L
+        ];
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const nextCanvas = document.getElementById('nextCanvas');
+        const nextCtx = nextCanvas.getContext('2d');
+
+        let board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+        let score = 0;
+        let level = 1;
+        let lines = 0;
+        let gameOver = false;
+        let isPaused = false;
+        let gameLoopId = null;
+        let lastTime = 0;
+        let dropCounter = 0;
+        let dropInterval = 800; // ms
+
+        let currentPiece = null;
+        let nextPiece = null;
+
+        // Particle System for Roblox Line Clear Explosion
+        let particles = [];
+
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.color = color;
+                this.vx = (Math.random() - 0.5) * 8;
+                this.vy = (Math.random() - 0.8) * 8;
+                this.size = Math.random() * 6 + 4;
+                this.alpha = 1;
+                this.gravity = 0.3;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vy += this.gravity;
+                this.alpha -= 0.02;
+            }
+
+            draw(targetCtx) {
+                targetCtx.save();
+                targetCtx.globalAlpha = Math.max(0, this.alpha);
+                targetCtx.fillStyle = this.color.main;
+                // Draw 3D Roblox Stud Block Particle
+                targetCtx.fillRect(this.x, this.y, this.size, this.size);
+                targetCtx.restore();
+            }
+        }
+
+        // Draws a stylized 3D Roblox Lego-like block with studs
+        function drawRobloxBlock(targetCtx, x, y, colorId, size = BLOCK_SIZE) {
+            if (!colorId) return;
+            const colors = SHAPES_COLORS[colorId];
+            if (!colors) return;
+
+            const px = x * size;
+            const py = y * size;
+
+            // Main Face
+            targetCtx.fillStyle = colors.main;
+            targetCtx.fillRect(px, py, size, size);
+
+            // Bevel Top Light
+            targetCtx.fillStyle = colors.top;
+            targetCtx.fillRect(px, py, size, 3);
+            targetCtx.fillRect(px, py, 3, size);
+
+            // Bevel Side Shadow
+            targetCtx.fillStyle = colors.side;
+            targetCtx.fillRect(px + size - 3, py, 3, size);
+            targetCtx.fillRect(px, py + size - 3, size, 3);
+
+            // Center Roblox Stud Circle
+            const studRadius = size * 0.22;
+            const centerX = px + size / 2;
+            const centerY = py + size / 2;
+
+            targetCtx.beginPath();
+            targetCtx.arc(centerX, centerY, studRadius, 0, Math.PI * 2);
+            targetCtx.fillStyle = colors.top;
+            targetCtx.fill();
+
+            targetCtx.beginPath();
+            targetCtx.arc(centerX + 1, centerY + 1, studRadius * 0.8, 0, Math.PI * 2);
+            targetCtx.fillStyle = colors.main;
+            targetCtx.fill();
+        }
+
+        function createPiece(type) {
+            return {
+                shape: SHAPES[type],
+                colorId: type,
+                x: Math.floor(COLS / 2) - Math.ceil(SHAPES[type][0].length / 2),
+                y: 0
+            };
+        }
+
+        function spawnNextPiece() {
+            if (!nextPiece) {
+                const rand = Math.floor(Math.random() * 7) + 1;
+                nextPiece = createPiece(rand);
+            }
+            currentPiece = nextPiece;
+            const randNext = Math.floor(Math.random() * 7) + 1;
+            nextPiece = createPiece(randNext);
+            drawNextPiece();
+
+            // Check Game Over on Spawn
+            if (collide(board, currentPiece)) {
+                gameOver = true;
+                sound.playGameOver();
+                showOverlay("ИГРА ОКОНЧЕНА", `Ты набрал ${score} очков! Нажми "Играть", чтобы попробовать снова.`);
+            }
+        }
+
+        function collide(boardMatrix, piece) {
+            const m = piece.shape;
+            for (let r = 0; r < m.length; r++) {
+                for (let c = 0; c < m[r].length; c++) {
+                    if (m[r][c] !== 0) {
+                        const newX = piece.x + c;
+                        const newY = piece.y + r;
+
+                        if (newX < 0 || newX >= COLS || newY >= ROWS) {
+                            return true;
+                        }
+                        if (newY >= 0 && boardMatrix[newY][newX] !== 0) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        function merge(boardMatrix, piece) {
+            piece.shape.forEach((row, r) => {
+                row.forEach((val, c) => {
+                    if (val !== 0) {
+                        boardMatrix[piece.y + r][piece.x + c] = piece.colorId;
+                    }
+                });
+            });
+        }
+
+        function rotate(matrix) {
+            const result = [];
+            for (let c = 0; c < matrix[0].length; c++) {
+                const row = [];
+                for (let r = matrix.length - 1; r >= 0; r--) {
+                    row.push(matrix[r][c]);
+                }
+                result.push(row);
+            }
+            return result;
+        }
+
+        function playerRotate() {
+            if (gameOver || isPaused || !currentPiece) return;
+            const oldShape = currentPiece.shape;
+            currentPiece.shape = rotate(currentPiece.shape);
+            
+            // Wall Kick check
+            if (collide(board, currentPiece)) {
+                currentPiece.x += 1;
+                if (collide(board, currentPiece)) {
+                    currentPiece.x -= 2;
+                    if (collide(board, currentPiece)) {
+                        currentPiece.x += 1;
+                        currentPiece.shape = oldShape; // Revert
+                        return;
+                    }
+                }
+            }
+            sound.playRotate();
+        }
+
+        function playerMove(dir) {
+            if (gameOver || isPaused || !currentPiece) return;
+            currentPiece.x += dir;
+            if (collide(board, currentPiece)) {
+                currentPiece.x -= dir;
+            } else {
+                sound.playMove();
+            }
+        }
+
+        function playerDrop() {
+            if (gameOver || isPaused || !currentPiece) return;
+            currentPiece.y++;
+            if (collide(board, currentPiece)) {
+                currentPiece.y--;
+                merge(board, currentPiece);
+                sound.playDrop();
+                clearLines();
+                spawnNextPiece();
+            }
+            dropCounter = 0;
+        }
+
+        function hardDrop() {
+            if (gameOver || isPaused || !currentPiece) return;
+            while (!collide(board, currentPiece)) {
+                currentPiece.y++;
+            }
+            currentPiece.y--;
+            merge(board, currentPiece);
+            sound.playDrop();
+            clearLines();
+            spawnNextPiece();
+            dropCounter = 0;
+        }
+
+        function clearLines() {
+            let linesCleared = 0;
+
+            for (let r = ROWS - 1; r >= 0; r--) {
+                if (board[r].every(val => val !== 0)) {
+                    // Create Particles for Explosion Effect
+                    for (let c = 0; c < COLS; c++) {
+                        const colorId = board[r][c];
+                        for (let p = 0; p < 3; p++) {
+                            particles.push(new Particle(
+                                c * BLOCK_SIZE + BLOCK_SIZE / 2,
+                                r * BLOCK_SIZE + BLOCK_SIZE / 2,
+                                SHAPES_COLORS[colorId]
+                            ));
+                        }
+                    }
+
+                    board.splice(r, 1);
+                    board.unshift(Array(COLS).fill(0));
+                    linesCleared++;
+                    r++; // Re-check same row index
+                }
+            }
+
+            if (linesCleared > 0) {
+                sound.playClear();
+                lines += linesCleared;
+                // Roblox Points multiplier
+                const points = [0, 100, 300, 500, 800][linesCleared] * level;
+                score += points;
+                level = Math.floor(lines / 10) + 1;
+                dropInterval = Math.max(100, 800 - (level - 1) * 70);
+
+                updateUI();
+            }
+        }
+
+        function updateUI() {
+            document.getElementById('score').innerText = score;
+            document.getElementById('robuxCount').innerText = score;
+            document.getElementById('level').innerText = level;
+            document.getElementById('lines').innerText = lines;
+        }
+
+        function drawGrid() {
+            ctx.strokeStyle = 'rgba(51, 65, 85, 0.4)';
+            ctx.lineWidth = 1;
+
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    ctx.strokeRect(c * BLOCK_SIZE, r * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+                }
+            }
+        }
+
+        function drawBoard() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawGrid();
+
+            // Draw Stationary Blocks
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    if (board[r][c] !== 0) {
+                        drawRobloxBlock(ctx, c, r, board[r][c]);
+                    }
+                }
+            }
+
+            // Draw Falling Piece
+            if (currentPiece) {
+                currentPiece.shape.forEach((row, r) => {
+                    row.forEach((val, c) => {
+                        if (val !== 0) {
+                            drawRobloxBlock(ctx, currentPiece.x + c, currentPiece.y + r, currentPiece.colorId);
+                        }
+                    });
+                });
+            }
+
+            // Render and update Particles
+            particles.forEach((p, index) => {
+                p.update();
+                p.draw(ctx);
+                if (p.alpha <= 0) particles.splice(index, 1);
+            });
+        }
+
+        function drawNextPiece() {
+            nextCtx.clearRect(0, 0, nextCanvas.width, nextCanvas.height);
+            if (!nextPiece) return;
+
+            const shape = nextPiece.shape;
+            const size = 18; // Smaller size for next canvas
+            const offsetX = (nextCanvas.width - shape[0].length * size) / 2;
+            const offsetY = (nextCanvas.height - shape.length * size) / 2;
+
+            shape.forEach((row, r) => {
+                row.forEach((val, c) => {
+                    if (val !== 0) {
+                        const targetX = (offsetX + c * size) / size;
+                        const targetY = (offsetY + r * size) / size;
+                        drawRobloxBlock(nextCtx, targetX, targetY, nextPiece.colorId, size);
+                    }
+                });
+            });
+        }
+
+        function update(time = 0) {
+            if (gameOver || isPaused) return;
+
+            const deltaTime = time - lastTime;
+            lastTime = time;
+            dropCounter += deltaTime;
+
+            if (dropCounter > dropInterval) {
+                playerDrop();
+            }
+
+            drawBoard();
+            gameLoopId = requestAnimationFrame(update);
+        }
+
+        function resetGame() {
+            board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+            score = 0;
+            level = 1;
+            lines = 0;
+            gameOver = false;
+            isPaused = false;
+            dropInterval = 800;
+            particles = [];
+            nextPiece = null;
+            updateUI();
+            spawnNextPiece();
+            document.getElementById('overlay').classList.add('hidden');
+            lastTime = performance.now();
+            cancelAnimationFrame(gameLoopId);
+            update();
+        }
+
+        function showOverlay(title, sub) {
+            document.getElementById('overlayTitle').innerText = title;
+            document.getElementById('overlaySub').innerText = sub;
+            document.getElementById('overlay').classList.remove('hidden');
+        }
+
+        // Keyboard Controls
+        document.addEventListener('keydown', (e) => {
+            sound.init();
+            if (gameOver) return;
+
+            switch (e.code) {
+                case 'ArrowLeft':
+                case 'KeyA':
+                    playerMove(-1);
+                    break;
+                case 'ArrowRight':
+                case 'KeyD':
+                    playerMove(1);
+                    break;
+                case 'ArrowDown':
+                case 'KeyS':
+                    playerDrop();
+                    break;
+                case 'ArrowUp':
+                case 'KeyW':
+                    playerRotate();
+                    break;
+                case 'Space':
+                    e.preventDefault();
+                    hardDrop();
+                    break;
+                case 'KeyP':
+                    togglePause();
+                    break;
+            }
+        });
+
+        // Touch Control Listeners
+        document.getElementById('btnLeft').addEventListener('click', () => { sound.init(); playerMove(-1); });
+        document.getElementById('btnRight').addEventListener('click', () => { sound.init(); playerMove(1); });
+        document.getElementById('btnRotate').addEventListener('click', () => { sound.init(); playerRotate(); });
+        document.getElementById('btnDrop').addEventListener('click', () => { sound.init(); hardDrop(); });
+
+        // Overlay & Buttons Listeners
+        document.getElementById('startBtn').addEventListener('click', () => {
+            sound.init();
+            resetGame();
+        });
+
+        function togglePause() {
+            if (gameOver) return;
+            isPaused = !isPaused;
+            const pauseBtn = document.getElementById('pauseBtn');
+            if (isPaused) {
+                pauseBtn.innerHTML = `<i class="fa-solid fa-play"></i> ИГРАТЬ`;
+                showOverlay("ПАУЗА", "Игра приостановлена. Нажмите кнопку, чтобы продолжить.");
+            } else {
+                pauseBtn.innerHTML = `<i class="fa-solid fa-pause"></i> ПАУЗА`;
+                document.getElementById('overlay').classList.add('hidden');
+                lastTime = performance.now();
+                update();
+            }
+        }
+
+        document.getElementById('pauseBtn').addEventListener('click', () => {
+            sound.init();
+            togglePause();
+        });
+
+        document.getElementById('soundBtn').addEventListener('click', () => {
+            sound.enabled = !sound.enabled;
+            const soundBtn = document.getElementById('soundBtn');
+            soundBtn.innerHTML = sound.enabled 
+                ? `<i class="fa-solid fa-volume-high"></i> ЗВУК` 
+                : `<i class="fa-solid fa-volume-xmark"></i> ВЫКЛ`;
+        });
+
+        // Initial Draw Background
+        drawGrid();
+    </script>
+</body>
+</html>
